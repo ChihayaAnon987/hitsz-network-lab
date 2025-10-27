@@ -22,11 +22,22 @@ BOOL LoadNpcapDlls() {
         fprintf(stderr, "Error in GetSystemDirectory: %lx", GetLastError());
         return FALSE;
     }
+    
+    // 使用更兼容的方式替换 _tcscat_s
+    #ifdef __MINGW32__
+    _tcscat(npcap_dir, _T("\\Npcap"));
+    #else
     _tcscat_s(npcap_dir, 512, _T("\\Npcap"));
+    #endif
+    
+    // 使用条件编译处理 SetDllDirectory
+    #ifndef __MINGW32__
     if (SetDllDirectory(npcap_dir) == 0) {
         fprintf(stderr, "Error in SetDllDirectory: %lx", GetLastError());
         return FALSE;
     }
+    #endif
+    
     return TRUE;
 }
 #endif

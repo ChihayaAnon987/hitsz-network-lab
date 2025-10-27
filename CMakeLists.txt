@@ -18,6 +18,11 @@ add_compile_options(-Wall -g)
 # set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test) 
 include_directories(./include ./Npcap/Include)
 link_directories(./Npcap/Lib ./Npcap/Lib/x64)
+
+# Enable Windows Vista and later features for newer APIs
+if(WIN32)
+    add_compile_definitions(_WIN32_WINNT=0x0600)
+endif()
 aux_source_directory(./src DIR_SRCS)
 
 add_executable(udp_server
@@ -64,6 +69,9 @@ add_executable(eth_in
 )
 target_link_libraries(eth_in ${PCAP})
 target_compile_definitions(eth_in PUBLIC TEST)
+if(WIN32)
+    target_link_libraries(eth_in kernel32)
+endif()
 
 add_executable(eth_out
     testing/eth_out.c
@@ -77,6 +85,9 @@ add_executable(eth_out
 )
 target_link_libraries(eth_out ${PCAP})
 target_compile_definitions(eth_out PUBLIC TEST)
+if(WIN32)
+    target_link_libraries(eth_out kernel32)
+endif()
 
 add_executable(arp_test
     testing/arp_test.c
@@ -90,6 +101,9 @@ add_executable(arp_test
 )
 target_link_libraries(arp_test ${PCAP})
 target_compile_definitions(arp_test PUBLIC TEST)
+if(WIN32)
+    target_link_libraries(arp_test kernel32)
+endif()
 
 add_executable(ip_test
     testing/ip_test.c
@@ -103,6 +117,9 @@ add_executable(ip_test
 )
 target_link_libraries(ip_test ${PCAP})
 target_compile_definitions(ip_test PUBLIC TEST ICMP UDP)
+if(WIN32)
+    target_link_libraries(ip_test kernel32)
+endif()
 
 add_executable(ip_frag_test
     testing/ip_frag_test.c
@@ -116,6 +133,9 @@ add_executable(ip_frag_test
 )
 target_link_libraries(ip_frag_test ${PCAP})
 target_compile_definitions(ip_frag_test PUBLIC TEST ICMP UDP TCP)
+if(WIN32)
+    target_link_libraries(ip_frag_test kernel32)
+endif()
 
 add_executable(icmp_test
     testing/icmp_test.c
@@ -129,6 +149,9 @@ add_executable(icmp_test
 )
 target_link_libraries(icmp_test ${PCAP})
 target_compile_definitions(icmp_test PUBLIC TEST ICMP UDP)
+if(WIN32)
+    target_link_libraries(icmp_test kernel32)
+endif()
 
 add_executable(udp_test
     testing/udp_test.c
@@ -142,6 +165,9 @@ add_executable(udp_test
 )
 target_link_libraries(udp_test ${PCAP})
 target_compile_definitions(udp_test PUBLIC TEST ICMP UDP)
+if(WIN32)
+    target_link_libraries(udp_test kernel32)
+endif()
 
 add_executable(tcp_test
     testing/tcp_test.c
@@ -155,6 +181,9 @@ add_executable(tcp_test
 )
 target_link_libraries(tcp_test ${PCAP})
 target_compile_definitions(tcp_test PUBLIC TEST ICMP TCP)
+if(WIN32)
+    target_link_libraries(tcp_test kernel32)
+endif()
 
 enable_testing()
 
