@@ -11,16 +11,22 @@
  */
 void ethernet_in(buf_t *buf)
 {
+    // 检查数据长度是否足够包含以太网头部
     if(buf->len < sizeof(ether_hdr_t))
     {
         return;
     }
-    ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
-    net_protocol_t protocol = swap16(hdr->protocol16);
-    uint8_t *src = hdr->src;
-    buf_remove_header(buf, sizeof(ether_hdr_t));
-    net_in(buf, protocol, src);
     
+    // 解析以太网头部
+    ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
+    net_protocol_t protocol = swap16(hdr->protocol16);  // 协议类型
+    uint8_t *src = hdr->src;                            // 源MAC地址
+    
+    // 移除以太网头部
+    buf_remove_header(buf, sizeof(ether_hdr_t));
+    
+    // 将数据传递给上层协议处理
+    net_in(buf, protocol, src);
 }
 
 /**
@@ -32,18 +38,22 @@ void ethernet_in(buf_t *buf)
  */
 void ethernet_out(buf_t *buf, const uint8_t *mac, net_protocol_t protocol)
 {
+    // 如果数据长度不足46字节，进行填充
     if (buf->len < ETHERNET_MIN_TRANSPORT_UNIT)
     {
         buf_add_padding(buf, ETHERNET_MIN_TRANSPORT_UNIT - buf->len);
     }
 
+    // 添加以太网头部
     buf_add_header(buf, sizeof(ether_hdr_t));
     ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
 
-    memcpy(hdr->dst, mac, NET_MAC_LEN);
-    memcpy(hdr->src, net_if_mac, NET_MAC_LEN);
-    hdr->protocol16 = swap16(protocol);
+    // 填写以太网头部信息
+    memcpy(hdr->dst, mac, NET_MAC_LEN);           // 目标MAC地址
+    memcpy(hdr->src, net_if_mac, NET_MAC_LEN);    // 源MAC地址
+    hdr->protocol16 = swap16(protocol);           // 协议类型
 
+    // 发送数据帧
     driver_send(buf);
 }
 
