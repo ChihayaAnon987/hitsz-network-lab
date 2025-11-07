@@ -10,7 +10,22 @@
  * @param src_ip 源ip地址
  */
 static void icmp_resp(buf_t *req_buf, uint8_t *src_ip) {
-    // TO-DO
+    // 初始化并封装数据
+    buf_init(&txbuf, req_buf->len);
+    memcpy(txbuf.data, req_buf->data, req_buf->len);
+    icmp_hdr_t *hdr = (icmp_hdr_t *)txbuf.data;
+    icmp_hdr_t *req_hdr = (icmp_hdr_t *)req_buf->data;
+    hdr->type = ICMP_TYPE_ECHO_REPLY;
+    hdr->code = 0;
+    hdr->id16 = req_hdr->id16;
+    hdr->seq16 = req_hdr->seq16;
+
+    // 计算并填写校验和
+    hdr->checksum16 = 0;
+    hdr->checksum16 = checksum16((uint16_t *)txbuf.data, txbuf.len);
+
+    // 发送ICMP响应包
+    ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
 
 /**
@@ -20,7 +35,15 @@ static void icmp_resp(buf_t *req_buf, uint8_t *src_ip) {
  * @param src_ip 源ip地址
  */
 void icmp_in(buf_t *buf, uint8_t *src_ip) {
-    // TO-DO
+    // 检查报头长度
+    if (buf->len < sizeof(icmp_hdr_t))
+        return;
+
+    icmp_hdr_t *hdr = (icmp_hdr_t *)buf->data;
+
+    // 处理回显请求
+    if (hdr->type == ICMP_TYPE_ECHO_REQUEST)
+        icmp_resp(buf, src_ip);
 }
 
 /**
@@ -31,7 +54,30 @@ void icmp_in(buf_t *buf, uint8_t *src_ip) {
  * @param code icmp code，协议不可达或端口不可达
  */
 void icmp_unreachable(buf_t *recv_buf, uint8_t *src_ip, icmp_code_t code) {
-    // TO-DO
+    // 初始化txbuf并填写ICMP报头
+    int total_size = sizeof(icmp_hdr_t) + sizeof(ip_hdr_t) + 8;
+    buf_init(&txbuf, total_size);
+    icmp_hdr_t *icmp_hdr = (icmp_hdr_t *)txbuf.data;
+    icmp_hdr->type = ICMP_TYPE_UNREACH;
+    icmp_hdr->code = code;
+    icmp_hdr->id16 = 0;
+    icmp_hdr->seq16 = 0;
+
+    // 填写ICMP数据部分：IP首部和前8字节数据
+    ip_hdr_t *ip_hdr = (ip_hdr_t *)(icmp_hdr + 1);
+    ip_hdr_t *recv_ip_hdr = (ip_hdr_t *)recv_buf->data;
+    memcpy(ip_hdr, recv_ip_hdr, sizeof(ip_hdr_t));
+    
+    uint8_t *data = (uint8_t *)(ip_hdr + 1);
+    uint8_t *recv_ip_data = (uint8_t *)(recv_ip_hdr + 1);
+    memcpy(data, recv_ip_data, 8);
+    
+    // 计算并填写校验和
+    icmp_hdr->checksum16 = 0;
+    icmp_hdr->checksum16 = checksum16((uint16_t *)txbuf.data, total_size);
+
+    // 发送ICMP不可达报文
+    ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
 
 /**

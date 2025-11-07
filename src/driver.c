@@ -5,9 +5,9 @@
 #ifdef _WIN32
 #include <tchar.h>
 /**
- * @brief npcpå®˜æ–¹æä¾›çš„åŠ è½½npcapçš„dllåº“å‡½æ•°
+ * @brief npcp¹Ù·½Ìá¹©µÄ¼ÓÔØnpcapµÄdll¿âº¯Êı
  *
- * @return BOOL æ˜¯å¦æˆåŠŸ
+ * @return BOOL ÊÇ·ñ³É¹¦
  */
 BOOL LoadNpcapDlls() {
     _TCHAR npcap_dir[512];
@@ -17,7 +17,14 @@ BOOL LoadNpcapDlls() {
         fprintf(stderr, "Error in GetSystemDirectory: %lx", GetLastError());
         return FALSE;
     }
+    
+#ifdef __MINGW32__
+    // Ê¹ÓÃMinGW¼æÈİµÄº¯Êı
+    _tcscat(npcap_dir, _T("\\Npcap"));
+#else
     _tcscat_s(npcap_dir, 512, _T("\\Npcap"));
+#endif
+    
     if (SetDllDirectory(npcap_dir) == 0) {
         fprintf(stderr, "Error in SetDllDirectory: %lx", GetLastError());
         return FALSE;
@@ -30,12 +37,12 @@ pcap_t *pcap;
 char pcap_errbuf[PCAP_ERRBUF_SIZE];
 
 /**
- * @brief æ ¹æ®ipè¿›è¡Œå‰ç¼€åŒ¹é…ï¼Œé€‰å–æœ€é•¿å‰ç¼€åŒ¹é…çš„ç½‘å¡
+ * @brief ¸ù¾İip½øĞĞÇ°×ºÆ¥Åä£¬Ñ¡È¡×î³¤Ç°×ºÆ¥ÅäµÄÍø¿¨
  *
- * @param ip ipåœ°å€
- * @param if_name å‡ºå£å‚æ•°ï¼Œé€‰å–çš„ç½‘å¡å
- * @param mask å‡ºå£å‚æ•°ï¼Œè¯¥ç½‘å¡çš„æ©ç 
- * @return int æˆåŠŸä¸º0ï¼Œå¤±è´¥ä¸º-1
+ * @param ip ipµØÖ·
+ * @param if_name ³ö¿Ú²ÎÊı£¬Ñ¡È¡µÄÍø¿¨Ãû
+ * @param mask ³ö¿Ú²ÎÊı£¬¸ÃÍø¿¨µÄÑÚÂë
+ * @return int ³É¹¦Îª0£¬Ê§°ÜÎª-1
  */
 int driver_find(uint8_t *ip, char *if_name, uint8_t *mask) {
     pcap_if_t *alldevs;
@@ -86,9 +93,9 @@ int driver_find(uint8_t *ip, char *if_name, uint8_t *mask) {
 }
 
 /**
- * @brief æ‰“å¼€ç½‘å¡
+ * @brief ´ò¿ªÍø¿¨
  *
- * @return int æˆåŠŸä¸º0ï¼Œå¤±è´¥ä¸º-1
+ * @return int ³É¹¦Îª0£¬Ê§°ÜÎª-1
  */
 int driver_open() {
 #ifdef _WIN32
@@ -107,12 +114,12 @@ int driver_open() {
     }
     printf("Using interface %s, my ip is %s.\n", if_name, iptos(net_if_ip));
 
-    if ((pcap = pcap_open_live(if_name, 65536, 1, 10, pcap_errbuf)) == NULL)  // æ··æ‚æ¨¡å¼æ‰“å¼€ç½‘å¡
+    if ((pcap = pcap_open_live(if_name, 65536, 1, 10, pcap_errbuf)) == NULL)  // »ìÔÓÄ£Ê½´ò¿ªÍø¿¨
     {
         fprintf(stderr, "Error in pcap_open_live.\n%s.\n", pcap_errbuf);
         return -1;
     }
-    if (pcap_setnonblock(pcap, 1, pcap_errbuf) < 0)  // è®¾ç½®éé˜»å¡æ¨¡å¼
+    if (pcap_setnonblock(pcap, 1, pcap_errbuf) < 0)  // ÉèÖÃ·Ç×èÈûÄ£Ê½
     {
         fprintf(stderr, "Error in pcap_setnonblock. %s.\n", pcap_errbuf);
         return -1;
@@ -120,7 +127,7 @@ int driver_open() {
     char filter_exp[PCAP_BUF_SIZE];
     struct bpf_program fp;
     uint8_t mac_addr[6] = NET_IF_MAC;
-    sprintf(filter_exp,  // è¿‡æ»¤æ•°æ®åŒ…
+    sprintf(filter_exp,  // ¹ıÂËÊı¾İ°ü
             "(ether dst %02x:%02x:%02x:%02x:%02x:%02x or ether broadcast) and (not ether src %02x:%02x:%02x:%02x:%02x:%02x)",
             mac_addr[0],
             mac_addr[1],
@@ -145,10 +152,10 @@ int driver_open() {
     return 0;
 }
 /**
- * @brief è¯•å›¾ä»ç½‘å¡æ¥æ”¶æ•°æ®åŒ…
+ * @brief ÊÔÍ¼´ÓÍø¿¨½ÓÊÕÊı¾İ°ü
  *
- * @param buf æ”¶åˆ°çš„æ•°æ®åŒ…
- * @return int æ•°æ®åŒ…çš„é•¿åº¦ï¼Œæœªæ”¶åˆ°ä¸º0ï¼Œé”™è¯¯ä¸º-1
+ * @param buf ÊÕµ½µÄÊı¾İ°ü
+ * @return int Êı¾İ°üµÄ³¤¶È£¬Î´ÊÕµ½Îª0£¬´íÎóÎª-1
  */
 int driver_recv(buf_t *buf) {
     struct pcap_pkthdr *pkt_hdr;
@@ -165,10 +172,10 @@ int driver_recv(buf_t *buf) {
     return -1;
 }
 /**
- * @brief ä½¿ç”¨ç½‘å¡å‘é€ä¸€ä¸ªæ•°æ®åŒ…
+ * @brief Ê¹ÓÃÍø¿¨·¢ËÍÒ»¸öÊı¾İ°ü
  *
- * @param buf è¦å‘é€çš„æ•°æ®åŒ…
- * @return int æˆåŠŸä¸º0ï¼Œå¤±è´¥ä¸º-1
+ * @param buf Òª·¢ËÍµÄÊı¾İ°ü
+ * @return int ³É¹¦Îª0£¬Ê§°ÜÎª-1
  */
 int driver_send(buf_t *buf) {
     if (pcap_sendpacket(pcap, buf->data, buf->len) == -1) {
@@ -179,7 +186,7 @@ int driver_send(buf_t *buf) {
     return 0;
 }
 /**
- * @brief å…³é—­ç½‘å¡
+ * @brief ¹Ø±ÕÍø¿¨
  *
  */
 void driver_close() {

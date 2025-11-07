@@ -70,7 +70,24 @@ uint8_t ip_prefix_match(uint8_t *ipa, uint8_t *ipb) {
  * @return uint16_t 校验和
  */
 uint16_t checksum16(uint16_t *data, size_t len) {
-    // TO-DO
+    uint32_t sum = 0;
+    // 累加所有16位数据，处理奇数字节情况
+    for (int i = 0; i < len; i += 2) {
+        if (i == len - 1) {
+            // 处理最后一个字节
+            sum += *((uint8_t *)data + i);
+        } else {
+            sum += data[i / 2];
+        }
+    }
+
+    // 处理进位，将高16位加到低16位直到没有进位
+    while ((sum >> 16) != 0) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    // 取反得到校验和
+    return (~sum) & 0xFFFF;
 }
 
 #pragma pack(1)
@@ -93,5 +110,31 @@ typedef struct peso_hdr {
  * @return uint16_t 计算得到的16位校验和
  */
 uint16_t transport_checksum(uint8_t protocol, buf_t *buf, uint8_t *src_ip, uint8_t *dst_ip) {
-    // TO-DO
+    // Step1: 增加 UDP 伪头部
+    buf_add_header(buf, sizeof(peso_hdr_t));
+    
+    // Step2: 暂存 IP 头部
+    // 由于伪头部正好覆盖IP头部的12字节，我们需要暂存这12字节
+    uint8_t ip_header_backup[sizeof(peso_hdr_t)];
+    memcpy(ip_header_backup, buf->data, sizeof(peso_hdr_t));
+    
+    // Step3: 填写 UDP 伪头部字段
+    peso_hdr_t *pseudo_hdr = (peso_hdr_t *)buf->data;
+    memcpy(pseudo_hdr->src_ip, src_ip, 4);
+    memcpy(pseudo_hdr->dst_ip, dst_ip, 4);
+    pseudo_hdr->placeholder = 0;
+    pseudo_hdr->protocol = protocol;
+    pseudo_hdr->total_len16 = swap16(buf->len - sizeof(peso_hdr_t)); // UDP长度(网络字节序)
+    
+    // Step4: 计算 UDP 校验和
+    uint16_t checksum = checksum16((uint16_t *)buf->data, buf->len);
+    
+    // Step5: 恢复 IP 头部
+    memcpy(buf->data, ip_header_backup, sizeof(peso_hdr_t));
+    
+    // Step6: 去掉 UDP 伪头部
+    buf_remove_header(buf, sizeof(peso_hdr_t));
+    
+    // Step7: 返回校验和值
+    return checksum;
 }

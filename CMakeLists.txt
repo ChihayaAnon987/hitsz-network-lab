@@ -12,10 +12,16 @@ else()
     set(PCAP pcap)
 endif()
 
+# 添加Windows特定的系统库
+if(WIN32)
+    set(WIN_LIBS packet ws2_32 kernel32 user32 advapi32 msvcrt)
+endif()
+
 set(HTTP_RESOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/app/resource)
 
 add_compile_options(-Wall -g)
 # set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test) 
+# 使用项目自带的Npcap库文件实现静态集成
 include_directories(./include ./Npcap/Include)
 link_directories(./Npcap/Lib ./Npcap/Lib/x64)
 
@@ -29,21 +35,21 @@ add_executable(udp_server
     ${DIR_SRCS}
     ./app/udp_server.c
 )
-target_link_libraries(udp_server ${PCAP})
+target_link_libraries(udp_server ${PCAP} ${WIN_LIBS})
 target_compile_definitions(udp_server PRIVATE ICMP UDP)
 
 add_executable(tcp_server
     ${DIR_SRCS}
     ./app/tcp_server.c
 )
-target_link_libraries(tcp_server ${PCAP})
+target_link_libraries(tcp_server ${PCAP} ${WIN_LIBS})
 target_compile_definitions(tcp_server PRIVATE ICMP TCP)
 
 add_executable(web_server
     ${DIR_SRCS}
     ./app/web_server.c
 )
-target_link_libraries(web_server ${PCAP})
+target_link_libraries(web_server ${PCAP} ${WIN_LIBS})
 target_compile_definitions(web_server PUBLIC HTTP_RESOURCE_DIR="${HTTP_RESOURCE_DIR}" ICMP TCP)
 
 set(TEST_FIX_SOURCE 
@@ -67,11 +73,8 @@ add_executable(eth_in
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(eth_in ${PCAP})
+target_link_libraries(eth_in ${PCAP} ${WIN_LIBS})
 target_compile_definitions(eth_in PUBLIC TEST)
-if(WIN32)
-    target_link_libraries(eth_in kernel32)
-endif()
 
 add_executable(eth_out
     testing/eth_out.c
@@ -83,11 +86,8 @@ add_executable(eth_out
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(eth_out ${PCAP})
+target_link_libraries(eth_out ${PCAP} ${WIN_LIBS})
 target_compile_definitions(eth_out PUBLIC TEST)
-if(WIN32)
-    target_link_libraries(eth_out kernel32)
-endif()
 
 add_executable(arp_test
     testing/arp_test.c
@@ -99,11 +99,8 @@ add_executable(arp_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(arp_test ${PCAP})
+target_link_libraries(arp_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(arp_test PUBLIC TEST)
-if(WIN32)
-    target_link_libraries(arp_test kernel32)
-endif()
 
 add_executable(ip_test
     testing/ip_test.c
@@ -115,11 +112,8 @@ add_executable(ip_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(ip_test ${PCAP})
+target_link_libraries(ip_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(ip_test PUBLIC TEST ICMP UDP)
-if(WIN32)
-    target_link_libraries(ip_test kernel32)
-endif()
 
 add_executable(ip_frag_test
     testing/ip_frag_test.c
@@ -131,11 +125,8 @@ add_executable(ip_frag_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(ip_frag_test ${PCAP})
+target_link_libraries(ip_frag_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(ip_frag_test PUBLIC TEST ICMP UDP TCP)
-if(WIN32)
-    target_link_libraries(ip_frag_test kernel32)
-endif()
 
 add_executable(icmp_test
     testing/icmp_test.c
@@ -147,11 +138,8 @@ add_executable(icmp_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(icmp_test ${PCAP})
+target_link_libraries(icmp_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(icmp_test PUBLIC TEST ICMP UDP)
-if(WIN32)
-    target_link_libraries(icmp_test kernel32)
-endif()
 
 add_executable(udp_test
     testing/udp_test.c
@@ -163,11 +151,8 @@ add_executable(udp_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(udp_test ${PCAP})
+target_link_libraries(udp_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(udp_test PUBLIC TEST ICMP UDP)
-if(WIN32)
-    target_link_libraries(udp_test kernel32)
-endif()
 
 add_executable(tcp_test
     testing/tcp_test.c
@@ -179,11 +164,8 @@ add_executable(tcp_test
     ${TEST_FIX_SOURCE}
     ${EXTRA_FILE}
 )
-target_link_libraries(tcp_test ${PCAP})
+target_link_libraries(tcp_test ${PCAP} ${WIN_LIBS})
 target_compile_definitions(tcp_test PUBLIC TEST ICMP TCP)
-if(WIN32)
-    target_link_libraries(tcp_test kernel32)
-endif()
 
 enable_testing()
 

@@ -16,7 +16,31 @@ map_t udp_table;
  * @param src_ip 源ip地址
  */
 void udp_in(buf_t *buf, uint8_t *src_ip) {
-    // TO-DO
+    // 包检查
+    if (buf->len < sizeof(udp_hdr_t))
+        return;
+
+    // 重新计算校验和
+    udp_hdr_t *hdr = (udp_hdr_t *)buf->data;
+    uint16_t checksum16_backup = hdr->checksum16;
+    hdr->checksum16 = 0;
+    uint16_t checksum = transport_checksum(NET_PROTOCOL_UDP, buf, src_ip, net_if_ip);
+    if (checksum != checksum16_backup)
+        return;
+    hdr->checksum16 = checksum;
+
+    // 查询处理函数
+    uint16_t dst_port = swap16(hdr->dst_port16);
+    udp_handler_t *handler = map_get(&udp_table, &dst_port);
+    if (handler == NULL) {
+        // 端口不可达
+        buf_add_header(buf, sizeof(ip_hdr_t));
+        icmp_unreachable(buf, net_if_ip, ICMP_CODE_PORT_UNREACH);
+    } else {
+        // 找到, 调用处理程序
+        buf_remove_header(buf, sizeof(ip_hdr_t));
+        (*handler)(buf->data, buf->len, src_ip, swap16(hdr->src_port16));
+    }
 }
 
 /**
@@ -28,7 +52,20 @@ void udp_in(buf_t *buf, uint8_t *src_ip) {
  * @param dst_port 目的端口号
  */
 void udp_out(buf_t *buf, uint16_t src_port, uint8_t *dst_ip, uint16_t dst_port) {
-    // TO-DO
+    // 添加UDP报头
+    buf_add_header(buf, sizeof(udp_hdr_t));
+
+    udp_hdr_t *hdr = (udp_hdr_t *)buf->data;
+    hdr->src_port16 = swap16(src_port);
+    hdr->dst_port16 = swap16(dst_port);
+    hdr->total_len16 = swap16(buf->len);
+    
+    // 计算校验和
+    hdr->checksum16 = 0;
+    hdr->checksum16 = transport_checksum(NET_PROTOCOL_UDP, buf, net_if_ip, dst_ip);
+
+    // 发送UDP数据包
+    ip_out(buf, dst_ip, NET_PROTOCOL_UDP);
 }
 
 /**
