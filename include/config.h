@@ -13,14 +13,13 @@
 #else
 #define NET_IF_IP        \
     {                    \
-        10, 250, 192, 200 \
+        169, 254, 82, 211 \
     }  // 自定义网卡ip地址
 #define NET_IF_MAC                         \
     {                                      \
-        0x74, 0x3A, 0xF4, 0x03, 0x7A, 0x05 \
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55 \
     }  // 自定义网卡mac地址
 #endif
-
 #define ETHERNET_MAX_TRANSPORT_UNIT 1500  // 以太网最大传输单元
 
 #define ARP_TIMEOUT_SEC (60 * 5)  // arp表过期时间

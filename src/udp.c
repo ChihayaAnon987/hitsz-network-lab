@@ -38,7 +38,7 @@ void udp_in(buf_t *buf, uint8_t *src_ip) {
         icmp_unreachable(buf, net_if_ip, ICMP_CODE_PORT_UNREACH);
     } else {
         // 找到, 调用处理程序
-        buf_remove_header(buf, sizeof(ip_hdr_t));
+        buf_remove_header(buf, sizeof(udp_hdr_t));
         (*handler)(buf->data, buf->len, src_ip, swap16(hdr->src_port16));
     }
 }
