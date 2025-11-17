@@ -36,12 +36,22 @@ void ip_in(buf_t *buf, uint8_t *src_mac) {
     hdr->hdr_checksum16 = hdr_checksum16_backup;
 
     // 检查目标IP地址
-    if (memcmp(hdr->dst_ip, net_if_ip, NET_IP_LEN) != 0)
+    uint8_t loopback_ip[4] = {127, 0, 0, 1};
+    int is_our_packet = (memcmp(hdr->dst_ip, net_if_ip, NET_IP_LEN) == 0) || 
+                        (memcmp(hdr->dst_ip, loopback_ip, NET_IP_LEN) == 0);
+    
+    if (!is_our_packet) {
         return;
+    }
 
     // 移除填充字段
     if (buf->len > swap16(hdr->total_len16))
         buf_remove_padding(buf, buf->len - swap16(hdr->total_len16));
+    if (hdr->protocol == NET_PROTOCOL_ICMP) {
+#ifdef PING  // 仅在PING测试模式下修改TTL，避免其他模块（如ip_test）因缺少icmp相关函数而报错
+        set_ping_req_TTL(hdr->ttl, buf);
+#endif
+    }
 
     // 提取协议和源IP，然后移除IP头部
     uint8_t protocol = hdr->protocol;
@@ -96,6 +106,32 @@ void ip_fragment_out(buf_t *buf, uint8_t *ip, net_protocol_t protocol, int id, u
  * @param protocol 上层协议
  */
 void ip_out(buf_t *buf, uint8_t *ip, net_protocol_t protocol) {
+    // 检查是否是回环地址
+    uint8_t loopback_ip[4] = {127, 0, 0, 1};
+    if (memcmp(ip, loopback_ip, NET_IP_LEN) == 0) {
+        // 对于回环地址，直接将数据包传回本机
+        buf_add_header(buf, sizeof(ip_hdr_t));
+        ip_hdr_t *hdr = (ip_hdr_t *)buf->data;
+        hdr->version = IP_VERSION_4;
+        hdr->hdr_len = sizeof(ip_hdr_t) / 4;
+        hdr->tos = 0;
+        hdr->total_len16 = swap16(buf->len);
+        hdr->id16 = 0;
+        hdr->flags_fragment16 = 0;
+        hdr->ttl = 64;
+        hdr->protocol = protocol;
+        memcpy(hdr->src_ip, net_if_ip, NET_IP_LEN);
+        memcpy(hdr->dst_ip, ip, NET_IP_LEN);
+        
+        // 计算并填充头部校验和
+        hdr->hdr_checksum16 = 0;
+        hdr->hdr_checksum16 = checksum16((uint16_t *)hdr, sizeof(ip_hdr_t));
+        
+        // 直接调用ip_in处理
+        ip_in(buf, NULL);
+        return;
+    }
+    
     // 计算IP最大负载长度(MTU减去IP头部长度)
     int max_load_length = 1500 - sizeof(ip_hdr_t);
 
