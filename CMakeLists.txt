@@ -31,11 +31,18 @@ if(WIN32)
 endif()
 aux_source_directory(./src DIR_SRCS)
 
+add_executable(monitor_server
+    app/monitor_server_main.c
+    src/monitor_server.c
+    src/protocol_stats.c
+)
+target_link_libraries(monitor_server ${WIN_LIBS})
+
 add_executable(icmp_server
     ${DIR_SRCS}
     ./app/icmp_server.c
 )
-target_link_libraries(icmp_server ${PCAP})
+target_link_libraries(icmp_server ${PCAP} ${WIN_LIBS})
 target_compile_definitions(icmp_server PRIVATE ICMP PING)
 
 
@@ -68,6 +75,8 @@ set(TEST_FIX_SOURCE
     src/map.c
     src/tcp.c
     src/utils.c
+    src/protocol_stats.c
+    src/monitor_server.c
 )
 
 # aux_source_directory(./testing DIR_TEST)

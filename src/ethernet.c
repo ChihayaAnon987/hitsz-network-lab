@@ -4,6 +4,7 @@
 #include "driver.h"
 #include "ip.h"
 #include "utils.h"
+#include "protocol_stats.h"
 /**
  * @brief 处理一个收到的数据包
  *
@@ -21,6 +22,10 @@ void ethernet_in(buf_t *buf)
     ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
     net_protocol_t protocol = swap16(hdr->protocol16);  // 协议类型
     uint8_t *src = hdr->src;                            // 源MAC地址
+    
+    // 更新接收统计
+    ethernet_stats.packets_received++;
+    ethernet_stats.bytes_received += buf->len;
     
     // 移除以太网头部
     buf_remove_header(buf, sizeof(ether_hdr_t));
@@ -52,6 +57,10 @@ void ethernet_out(buf_t *buf, const uint8_t *mac, net_protocol_t protocol)
     memcpy(hdr->dst, mac, NET_MAC_LEN);           // 目标MAC地址
     memcpy(hdr->src, net_if_mac, NET_MAC_LEN);    // 源MAC地址
     hdr->protocol16 = swap16(protocol);           // 协议类型
+
+    // 更新发送统计
+    ethernet_stats.packets_sent++;
+    ethernet_stats.bytes_sent += buf->len;
 
     // 发送数据帧
     driver_send(buf);

@@ -2,6 +2,7 @@
 
 #include "icmp.h"
 #include "ip.h"
+#include "protocol_stats.h"
 
 /**
  * @brief udp处理程序表
@@ -29,11 +30,16 @@ void udp_in(buf_t *buf, uint8_t *src_ip) {
         return;
     hdr->checksum16 = checksum;
 
+    // 更新接收统计
+    udp_stats.packets_received++;
+    udp_stats.bytes_received += swap16(hdr->total_len16);
+
     // 查询处理函数
     uint16_t dst_port = swap16(hdr->dst_port16);
     udp_handler_t *handler = map_get(&udp_table, &dst_port);
     if (handler == NULL) {
         // 端口不可达
+        udp_stats.errors++;
         buf_add_header(buf, sizeof(ip_hdr_t));
         icmp_unreachable(buf, net_if_ip, ICMP_CODE_PORT_UNREACH);
     } else {
@@ -63,6 +69,10 @@ void udp_out(buf_t *buf, uint16_t src_port, uint8_t *dst_ip, uint16_t dst_port) 
     // 计算校验和
     hdr->checksum16 = 0;
     hdr->checksum16 = transport_checksum(NET_PROTOCOL_UDP, buf, net_if_ip, dst_ip);
+
+    // 更新发送统计
+    udp_stats.packets_sent++;
+    udp_stats.bytes_sent += buf->len;
 
     // 发送UDP数据包
     ip_out(buf, dst_ip, NET_PROTOCOL_UDP);

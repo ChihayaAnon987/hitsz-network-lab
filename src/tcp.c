@@ -2,6 +2,7 @@
 
 #include "icmp.h"
 #include "ip.h"
+#include "protocol_stats.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -133,6 +134,11 @@ void tcp_out(tcp_conn_t *tcp_conn, buf_t *buf, uint16_t src_port, uint8_t *dst_i
     // 计算校验和
     tcp_hdr->checksum16 = 0;
     tcp_hdr->checksum16 = transport_checksum(NET_PROTOCOL_TCP, buf, net_if_ip, dst_ip);
+    
+    // 更新发送统计
+    tcp_stats.packets_sent++;
+    tcp_stats.bytes_sent += buf->len;
+    
     // 发送到 IP 层
     ip_out(buf, dst_ip, NET_PROTOCOL_TCP);
     /* =============================== TODO 1 END =============================== */
@@ -151,6 +157,10 @@ void tcp_in(buf_t *buf, uint8_t *src_ip) {
         return;
 
     tcp_hdr_t *hdr = (tcp_hdr_t *)buf->data;
+
+    // 更新接收统计
+    tcp_stats.packets_received++;
+    tcp_stats.bytes_received += buf->len;
 
     // 校验checksum
     uint16_t checksum = hdr->checksum16;

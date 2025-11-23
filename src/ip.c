@@ -4,6 +4,7 @@
 #include "ethernet.h"
 #include "icmp.h"
 #include "net.h"
+#include "protocol_stats.h"
 
 /**
  * @brief 处理一个收到的数据包
@@ -56,7 +57,12 @@ void ip_in(buf_t *buf, uint8_t *src_mac) {
     // 提取协议和源IP，然后移除IP头部
     uint8_t protocol = hdr->protocol;
     uint8_t *src_ip = hdr->src_ip;
+    uint16_t total_len = swap16(hdr->total_len16);
     buf_remove_header(buf, hdr->hdr_len * 4);
+
+    // 更新统计数据
+    ip_stats.packets_received++;
+    ip_stats.bytes_received += total_len;
 
     // 向上层传递数据包
     int flag = net_in(buf, protocol, src_ip);
@@ -93,6 +99,10 @@ void ip_fragment_out(buf_t *buf, uint8_t *ip, net_protocol_t protocol, int id, u
     // 计算并填充头部校验和
     hdr->hdr_checksum16 = 0;
     hdr->hdr_checksum16 = checksum16((uint16_t *)hdr, sizeof(ip_hdr_t));
+
+    // 更新统计数据
+    ip_stats.packets_sent++;
+    ip_stats.bytes_sent += buf->len;
 
     // 发送数据包
     arp_out(buf, ip);

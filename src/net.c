@@ -7,6 +7,8 @@
 #include "ip.h"
 #include "tcp.h"
 #include "udp.h"
+#include "protocol_stats.h"
+#include "monitor_server.h"
 
 /**
  * @brief 协议表 <协议号,处理程序>的容器
@@ -43,6 +45,10 @@ int net_init() {
     ethernet_init();
     arp_init();
     ip_init();
+    
+    // 初始化协议统计数据
+    protocol_stats_init();
+    
 #ifdef ICMP
     icmp_init();
 #endif
@@ -52,6 +58,10 @@ int net_init() {
 #ifdef TCP
     tcp_init();
 #endif
+    
+    // 启动监控服务器
+    monitor_server_init();
+    
     return 0;
 }
 

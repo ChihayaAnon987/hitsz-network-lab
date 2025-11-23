@@ -2,6 +2,7 @@
 
 #include "ip.h"
 #include "net.h"
+#include "protocol_stats.h"
 
 map_t map_ping_req;
 map_t map_ping;
@@ -27,6 +28,10 @@ static void icmp_resp(buf_t *req_buf, uint8_t *src_ip) {
     hdr->checksum16 = 0;
     hdr->checksum16 = checksum16((uint16_t *)txbuf.data, txbuf.len);
 
+    // 更新发送统计
+    icmp_stats.packets_sent++;
+    icmp_stats.bytes_sent += txbuf.len;
+
     // 发送ICMP响应包
     ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
@@ -43,6 +48,10 @@ void icmp_in(buf_t *buf, uint8_t *src_ip) {
         return;
 
     icmp_hdr_t *hdr = (icmp_hdr_t *)buf->data;
+
+    // 更新接收统计
+    icmp_stats.packets_received++;
+    icmp_stats.bytes_received += buf->len;
 
     // 处理回显请求
     if (hdr->type == ICMP_TYPE_ECHO_REQUEST)
@@ -86,6 +95,10 @@ void icmp_unreachable(buf_t *recv_buf, uint8_t *src_ip, icmp_code_t code) {
     icmp_hdr->checksum16 = 0;
     icmp_hdr->checksum16 = checksum16((uint16_t *)txbuf.data, total_size);
 
+    // 更新发送统计
+    icmp_stats.packets_sent++;
+    icmp_stats.bytes_sent += total_size;
+
     // 发送ICMP不可达报文
     ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
@@ -128,6 +141,10 @@ void icmp_req_out(uint8_t *dst_ip, uint16_t id) {
     gettimeofday(&ping_req.send_time, NULL);
     memset(&ping_req.receive_time, 0, sizeof(struct timeval));
     map_set(&map_ping_req, &id, &ping_req);
+
+    // 更新发送统计
+    icmp_stats.packets_sent++;
+    icmp_stats.bytes_sent += send_ping_req->len;
 
     ip_out(send_ping_req, dst_ip, NET_PROTOCOL_ICMP);
 }
