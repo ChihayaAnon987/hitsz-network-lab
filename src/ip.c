@@ -48,17 +48,20 @@ void ip_in(buf_t *buf, uint8_t *src_mac) {
     // 移除填充字段
     if (buf->len > swap16(hdr->total_len16))
         buf_remove_padding(buf, buf->len - swap16(hdr->total_len16));
-    if (hdr->protocol == NET_PROTOCOL_ICMP) {
-#ifdef PING  // 仅在PING测试模式下修改TTL，避免其他模块（如ip_test）因缺少icmp相关函数而报错
-        set_ping_req_TTL(hdr->ttl, buf);
-#endif
-    }
 
-    // 提取协议和源IP，然后移除IP头部
+    // 提取协议、源IP和TTL，然后移除IP头部
     uint8_t protocol = hdr->protocol;
     uint8_t *src_ip = hdr->src_ip;
+    uint8_t ttl = hdr->ttl;
     uint16_t total_len = swap16(hdr->total_len16);
     buf_remove_header(buf, hdr->hdr_len * 4);
+
+    // 移除IP头后再设置TTL
+    if (protocol == NET_PROTOCOL_ICMP) {
+#ifdef PING  // 仅在PING测试模式下修改TTL，避免其他模块（如ip_test）因缺少icmp相关函数而报错
+        set_ping_req_TTL(ttl, buf);
+#endif
+    }
 
     // 更新统计数据
     ip_stats.packets_received++;
