@@ -67,6 +67,13 @@ add_executable(web_server
 target_link_libraries(web_server ${PCAP} ${WIN_LIBS})
 target_compile_definitions(web_server PUBLIC HTTP_RESOURCE_DIR="${HTTP_RESOURCE_DIR}" ICMP TCP)
 
+add_executable(ip_server
+    ${DIR_SRCS}
+    ./app/ip_server.c
+)
+target_link_libraries(ip_server ${PCAP} ${WIN_LIBS})
+target_compile_definitions(ip_server PRIVATE ICMP UDP TCP)
+
 set(TEST_FIX_SOURCE 
     testing/faker/driver.c 
     testing/global.c
