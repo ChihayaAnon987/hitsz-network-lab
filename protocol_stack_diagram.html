@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>协议栈系统架构可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            
+            /* Layer Colors */
+            --color-driver: #e0f2fe;
+            --stroke-driver: #0284c7;
+            --color-link: #d1fae5;
+            --stroke-link: #059669;
+            --color-network: #ffedd5;
+            --stroke-network: #ea580c;
+            --color-transport: #f3e8ff;
+            --stroke-transport: #9333ea;
+            --color-app: #fce7f3;
+            --stroke-app: #db2777;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h1::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 24px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        button:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        button:active {
+            background-color: #e2e8f0;
+        }
+
+        main {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .diagram-viewport {
+            flex: 1;
+            background-color: #ffffff;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 4rem;
+            cursor: grab;
+        }
+
+        .diagram-viewport:active {
+            cursor: grabbing;
+        }
+
+        .diagram-content {
+            transform-origin: center top;
+            transition: transform 0.1s ease-out;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--card-bg);
+            border-left: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.02);
+            z-index: 5;
+        }
+
+        .legend-section {
+            margin-bottom: 2rem;
+        }
+
+        .legend-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+        }
+
+        .legend-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            border: 2px solid;
+        }
+
+        .legend-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .legend-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.1rem;
+        }
+
+        /* Mermaid Customization */
+        .mermaid {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>协议栈系统架构图</h1>
+        <div class="controls">
+            <button onclick="resetZoom()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                重置
+            </button>
+            <button onclick="zoomOut()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                缩小
+            </button>
+            <button onclick="zoomIn()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                放大
+            </button>
+            <div style="width: 1px; height: 24px; background-color: var(--border-color); margin: 0 0.5rem;"></div>
+            <button onclick="saveAsSVG()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                SVG
+            </button>
+            <button onclick="saveAsPNG()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                PNG
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="diagram-viewport" id="viewport">
+            <div class="diagram-content" id="diagram">
+                <div class="mermaid">
+                    graph TD
+                        %% 配置
+                        %% init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'arial', 'fontSize': '14px', 'primaryColor': '#fff', 'edgeLabelBackground':'#fff', 'tertiaryColor': '#fff' }}%%
+
+                        %% 样式定义
+                        classDef driver fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e,rx:5,ry:5;
+                        classDef link fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#064e3b,rx:5,ry:5;
+                        classDef network fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#7c2d12,rx:5,ry:5;
+                        classDef transport fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87,rx:5,ry:5;
+                        classDef app fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#831843,rx:5,ry:5;
+                        classDef container fill:#ffffff,stroke:#94a3b8,stroke-width:1px,stroke-dasharray: 5 5,color:#475569;
+
+                        %% 驱动层
+                        subgraph Driver_Layer [驱动层]
+                            direction TB
+                            driver_recv(driver_recv)
+                            driver_send(driver_send)
+                        end
+                        class Driver_Layer container
+                        class driver_recv,driver_send driver;
+
+                        %% 链路层
+                        subgraph Link_Layer [链路层]
+                            direction TB
+                            ethernet_in(ethernet_in)
+                            ethernet_out(ethernet_out)
+                            net_in(net_in)
+                            
+                            subgraph ARP_Module [ARP 模块]
+                                arp_in(arp_in)
+                                arp_out(arp_out)
+                                arp_req(arp_req)
+                                arp_resp(arp_resp)
+                                arp_table[(ARP Table)]
+                                arp_buf[(Pending Buffer)]
+                            end
+                        end
+                        class Link_Layer,ARP_Module container
+                        class ethernet_in,ethernet_out,net_in,arp_in,arp_out,arp_req,arp_resp link;
+                        class arp_table,arp_buf link;
+
+                        %% 网络层
+                        subgraph Network_Layer [网络层]
+                            direction TB
+                            ip_in(ip_in)
+                            ip_out(ip_out)
+                            ip_reassemble[(IP Reassemble)]
+                            
+                            subgraph ICMP_Module [ICMP 模块]
+                                icmp_in(icmp_in)
+                                icmp_resp(icmp_resp)
+                                icmp_unreachable(icmp_unreachable)
+                            end
+                        end
+                        class Network_Layer,ICMP_Module container
+                        class ip_in,ip_out,icmp_in,icmp_resp,icmp_unreachable network;
+                        class ip_reassemble network;
+
+                        %% 传输层
+                        subgraph Transport_Layer [传输层]
+                            direction TB
+                            
+                            subgraph UDP_Module [UDP 模块]
+                                udp_in(udp_in)
+                                udp_out(udp_out)
+                                udp_table[(UDP Table)]
+                            end
+
+                            subgraph TCP_Module [TCP 模块]
+                                tcp_in(tcp_in)
+                                tcp_out(tcp_out)
+                                tcp_send(tcp_send)
+                                tcp_conn_table[(TCP Connections)]
+                            end
+                        end
+                        class Transport_Layer,UDP_Module,TCP_Module container
+                        class udp_in,udp_out,tcp_in,tcp_out,tcp_send transport;
+                        class udp_table,tcp_conn_table transport;
+
+                        %% 应用层
+                        subgraph Application_Layer [应用层]
+                            direction TB
+                            http_server(http_server_callback)
+                            http_respond(http_respond)
+                        end
+                        class Application_Layer container
+                        class http_server,http_respond app;
+
+                        %% 接收流程
+                        driver_recv -->|Raw Packet| ethernet_in
+                        ethernet_in -->|Remove Eth Header| net_in
+                        net_in -->|Protocol: ARP| arp_in
+                        net_in -->|Protocol: IP| ip_in
+
+                        %% ARP 处理
+                        arp_in -->|Update| arp_table
+                        arp_in -->|Request for us| arp_resp
+                        arp_in -->|Got Reply, Send Pending| ethernet_out
+                        arp_resp -->|Reply Packet| ethernet_out
+
+                        %% IP 接收
+                        ip_in -->|Reassemble| ip_reassemble
+                        ip_reassemble -->|Complete Packet| ip_in
+                        ip_in -->|Protocol: ICMP| icmp_in
+                        ip_in -->|Protocol: UDP| udp_in
+                        ip_in -->|Protocol: TCP| tcp_in
+
+                        %% ICMP 处理
+                        icmp_in -->|Echo Request| icmp_resp
+                        icmp_resp -->|Echo Reply| ip_out
+                        icmp_unreachable -->|Error Packet| ip_out
+
+                        %% UDP 处理
+                        udp_in -->|Check Checksum| udp_table
+                        udp_table -->|Found Handler| http_server
+                        udp_table -->|No Port| icmp_unreachable
+                        
+                        %% TCP 处理
+                        tcp_in -->|Check Checksum/State| tcp_conn_table
+                        tcp_conn_table -->|Update State/ACK| tcp_out
+                        tcp_in -->|Data Payload| http_server
+
+                        %% Web Server 处理
+                        http_server -->|Parse Request| http_respond
+                        http_respond -->|Send Response| tcp_send
+
+                        %% 发送流程
+                        tcp_send -->|Data| tcp_out
+                        tcp_out -->|TCP Segment| ip_out
+                        udp_out -->|UDP Datagram| ip_out
+                        
+                        ip_out -->|Fragment if needed| arp_out
+                        
+                        arp_out -->|Check| arp_table
+                        arp_table -->|MAC Found| ethernet_out
+                        arp_table -->|MAC Not Found| arp_buf
+                        arp_buf -->|Buffer Packet| arp_req
+                        arp_req -->|ARP Request| ethernet_out
+
+                        ethernet_out -->|Add Eth Header| driver_send
+                </div>
+            </div>
+        </div>
+
+        <aside class="sidebar">
+            <div class="legend-section">
+                <div class="legend-title">图层说明</div>
+                
+                <div class="legend-item">
+                    <div class="color-dot" style="background-color: var(--color-app); border-color: var(--stroke-app)"></div>
+                    <div>
+                        <div class="legend-text">应用层</div>
+                        <div class="legend-desc">Web Server 业务逻辑</div>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <div class="color-dot" style="background-color: var(--color-transport); border-color: var(--stroke-transport)"></div>
+                    <div>
+                        <div class="legend-text">传输层</div>
+                        <div class="legend-desc">TCP / UDP 协议处理</div>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <div class="color-dot" style="background-color: var(--color-network); border-color: var(--stroke-network)"></div>
+                    <div>
+                        <div class="legend-text">网络层</div>
+                        <div class="legend-desc">IP / ICMP 协议处理</div>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <div class="color-dot" style="background-color: var(--color-link); border-color: var(--stroke-link)"></div>
+                    <div>
+                        <div class="legend-text">链路层</div>
+                        <div class="legend-desc">Ethernet / ARP 协议处理</div>
+                    </div>
+                </div>
+
+                <div class="legend-item">
+                    <div class="color-dot" style="background-color: var(--color-driver); border-color: var(--stroke-driver)"></div>
+                    <div>
+                        <div class="legend-text">驱动层</div>
+                        <div class="legend-desc">物理设备收发接口</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="legend-section">
+                <div class="legend-title">操作指南</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <p style="margin-bottom: 0.5rem;">• <strong>拖拽</strong> 画布可移动视图</p>
+                    <p style="margin-bottom: 0.5rem;">• 使用 <strong>顶部按钮</strong> 缩放视图</p>
+                    <p>• 流程图展示了数据包从接收到发送的完整生命周期</p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            flowchart: { 
+                useMaxWidth: false, 
+                htmlLabels: false,
+                curve: 'basis'
+            }
+        });
+
+        // Zoom & Pan Logic
+        let scale = 1;
+        const viewport = document.getElementById('viewport');
+        const content = document.getElementById('diagram');
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
+
+        function updateTransform() {
+            content.style.transform = `scale(${scale})`;
+        }
+
+        function zoomIn() {
+            scale = Math.min(scale + 0.1, 3);
+            updateTransform();
+        }
+
+        function zoomOut() {
+            scale = Math.max(scale - 0.1, 0.5);
+            updateTransform();
+        }
+
+        function resetZoom() {
+            scale = 1;
+            updateTransform();
+            // Center content
+            viewport.scrollLeft = (content.scrollWidth - viewport.clientWidth) / 2;
+        }
+
+        // Drag Scrolling
+        viewport.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            viewport.style.cursor = 'grabbing';
+            startX = e.pageX - viewport.offsetLeft;
+            startY = e.pageY - viewport.offsetTop;
+            scrollLeft = viewport.scrollLeft;
+            scrollTop = viewport.scrollTop;
+        });
+
+        viewport.addEventListener('mouseleave', () => {
+            isDragging = false;
+            viewport.style.cursor = 'grab';
+        });
+
+        viewport.addEventListener('mouseup', () => {
+            isDragging = false;
+            viewport.style.cursor = 'grab';
+        });
+
+        viewport.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - viewport.offsetLeft;
+            const y = e.pageY - viewport.offsetTop;
+            const walkX = (x - startX) * 1.5; // Scroll speed
+            const walkY = (y - startY) * 1.5;
+            viewport.scrollLeft = scrollLeft - walkX;
+            viewport.scrollTop = scrollTop - walkY;
+        });
+
+        // Initial centering (delayed to wait for mermaid render)
+        setTimeout(() => {
+            resetZoom();
+        }, 1000);
+
+        // Export Functions
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function getMermaidSVG() {
+            const svgElement = document.querySelector('.mermaid svg');
+            if (!svgElement) {
+                alert('图表尚未加载完成，请稍后再试。');
+                return null;
+            }
+            const clone = svgElement.cloneNode(true);
+            clone.style.backgroundColor = '#ffffff';
+            clone.style.fontFamily = "sans-serif";
+            
+            // Inline Styles to ensure text visibility and correct rendering
+            const styleElement = document.createElement('style');
+            let cssRules = '';
+            
+            // Basic Mermaid Styles fallback
+            cssRules += `
+                .node rect, .node circle, .node ellipse, .node polygon, .node path { stroke-width: 2px; }
+                .node .label { text-align: center; }
+                .node .label { color: #333; }
+                text { font-family: sans-serif; font-size: 14px; fill: #333; }
+                .edgeLabel { background-color: white; }
+            `;
+
+            // Try to copy relevant styles from document
+            try {
+                for (let sheet of document.styleSheets) {
+                    try {
+                        for (let rule of sheet.cssRules) {
+                            if (rule.cssText.includes('.mermaid') || 
+                                rule.cssText.includes('.node') || 
+                                rule.cssText.includes('.edge') ||
+                                rule.selectorText && (rule.selectorText.includes('#') || rule.selectorText.includes('.'))) {
+                                cssRules += rule.cssText + '\n';
+                            }
+                        }
+                    } catch (e) {
+                        // Accessing cross-origin stylesheets might fail
+                        console.warn('Could not access stylesheet rules', e);
+                    }
+                }
+            } catch (e) {
+                console.warn('Error collecting styles', e);
+            }
+
+            styleElement.textContent = cssRules;
+            clone.insertBefore(styleElement, clone.firstChild);
+
+            // Ensure dimensions are set
+            const box = svgElement.getBoundingClientRect();
+            const viewBox = svgElement.getAttribute('viewBox');
+            let width, height;
+            if (viewBox) {
+                const parts = viewBox.split(/\s+|,/);
+                width = parseFloat(parts[2]);
+                height = parseFloat(parts[3]);
+            } else {
+                width = box.width;
+                height = box.height;
+            }
+            
+            if (!clone.hasAttribute('width')) clone.setAttribute('width', width);
+            if (!clone.hasAttribute('height')) clone.setAttribute('height', height);
+
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(clone);
+            
+            if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+                source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+                source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+            }
+            
+            return { source, width, height };
+        }
+
+        function saveAsSVG() {
+            const data = getMermaidSVG();
+            if (!data) return;
+            
+            const blob = new Blob([data.source], {type: 'image/svg+xml;charset=utf-8'});
+            downloadBlob(blob, 'protocol_stack_diagram.svg');
+        }
+
+        function saveAsPNG() {
+            const element = document.querySelector('.mermaid');
+            if (!element) {
+                alert('未找到图表元素');
+                return;
+            }
+
+            // 使用 html2canvas 进行截图
+            // 注意：html2canvas 对 SVG 的支持有限，但通常能处理 Mermaid 图表
+            html2canvas(element, {
+                backgroundColor: '#ffffff',
+                // 提高分辨率：使用更高倍数，如果设备像素比更高则取更大值
+                scale: Math.max(4, window.devicePixelRatio || 1),
+                logging: false,
+                useCORS: true, // 尝试处理跨域资源
+                allowTaint: true // 允许跨域图片污染画布（仅用于显示，导出可能会受限，但在本地环境有时能绕过）
+            }).then(canvas => {
+                try {
+                    canvas.toBlob(function(blob) {
+                        if (blob) {
+                            downloadBlob(blob, 'protocol_stack_diagram.png');
+                        } else {
+                            // Fallback for browsers that might fail toBlob on tainted canvas
+                            const dataUrl = canvas.toDataURL('image/png');
+                            const a = document.createElement('a');
+                            a.href = dataUrl;
+                            a.download = '协议栈架构图.png';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        }
+                    }, 'image/png');
+                } catch (e) {
+                    // 如果 toBlob 失败（通常是因为 tainted canvas），尝试直接 DataURL
+                    try {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = 'protocol_stack_diagram.png';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch (e2) {
+                        alert('导出 PNG 失败 (Canvas Tainted): ' + e2.message + '\n建议使用 SVG 导出功能。');
+                    }
+                }
+            }).catch(err => {
+                console.error(err);
+                alert('导出 PNG 出错: ' + err.message);
+            });
+        }
+    </script>
+</body>
+</html>
