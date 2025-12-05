@@ -3,324 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>协议栈可视化监控系统架构图</title>
+    <title>监控流程图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f7fb;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px;
         }
-        
         .container {
-            background: white;
+            width: min(960px, 100%);
+            background: #ffffff;
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 900px;
-            width: 100%;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+            padding: 24px;
         }
-        
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 40px;
-            font-size: 28px;
-        }
-        
-        .architecture {
+        .flow-header {
             display: flex;
-            flex-direction: column;
-            gap: 25px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
         }
-        
-        /* 应用层 */
-        .app-layer {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            padding: 25px;
-            text-align: center;
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .app-layer h2 {
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .app-layer p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        /* 箭头连接 */
-        .arrow {
-            text-align: center;
-            color: #667eea;
-            font-size: 28px;
-            font-weight: bold;
-            padding: 10px 0;
-        }
-        
-        /* 协议栈核心 */
-        .protocol-stack {
-            background: #f8f9ff;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            padding: 25px;
-        }
-        
-        .protocol-stack h2 {
+        .flow-header h1 {
+            font-size: 22px;
             color: #333;
-            font-size: 20px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
+            font-weight: 700;
         }
-        
-        /* 三层结构 */
-        .stack-layers {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .layer {
-            background: white;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .layer h3 {
-            color: #667eea;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        
-        .layer ul {
-            list-style: none;
-            font-size: 13px;
-            color: #555;
-        }
-        
-        .layer ul li {
-            padding: 4px 0;
-            padding-left: 20px;
-            position: relative;
-        }
-        
-        .layer ul li:before {
-            content: "-";
-            position: absolute;
-            left: 0;
-            color: #764ba2;
-            font-weight: bold;
-        }
-        
-        /* 可视化层 */
-        .visualization-layer {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 10px;
-            padding: 25px;
-            color: white;
-        }
-        
-        .visualization-layer h2 {
-            font-size: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .visualization-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .viz-panel {
-            background: rgba(255, 255, 255, 0.15);
+        .action-btn {
+            padding: 10px 14px;
+            border: none;
             border-radius: 8px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .viz-panel h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(102, 126, 234, 0.25);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
-        
-        .viz-panel ul {
-            list-style: none;
-            font-size: 12px;
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
-        
-        .viz-panel ul li {
-            padding: 3px 0;
-            padding-left: 18px;
-            position: relative;
-        }
-        
-        .viz-panel ul li:before {
-            content: "-";
-            position: absolute;
-            left: 0;
-            color: #fff;
-            font-weight: bold;
-        }
-        
-        /* 数据流标注 */
-        .data-flow {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            border-radius: 5px;
-            font-size: 13px;
-            color: #856404;
-            margin-top: 20px;
-        }
-        
-        .data-flow strong {
-            color: #ff6b6b;
-        }
-        
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 22px;
-                margin-bottom: 30px;
-            }
-            
-            .visualization-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .app-layer h2 {
-                font-size: 18px;
-            }
-        }
-        
-        /* 打印优化 */
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            
-            .container {
-                box-shadow: none;
-                max-width: 100%;
-            }
+        .mermaid {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>协议栈可视化监控系统架构图</h1>
-        
-        <div class="architecture">
-            <!-- 应用层 -->
-            <div class="app-layer">
-                <h2>应用层（TCP服务器）</h2>
-                <p>tcp_server.exe / udp_server.exe / web_server.exe / icmp_server.exe</p>
-            </div>
-            
-            <!-- 箭头 -->
-            <div class="arrow">↓ 调用 net_init()</div>
-            
-            <!-- 协议栈核心 -->
-            <div class="protocol-stack">
-                <h2>协议栈核心模块</h2>
-                <div class="stack-layers">
-                    <div class="layer">
-                        <h3>① 数据采集层（5个关键位置）</h3>
-                        <ul>
-                            <li>ethernet.c - 以太网帧收/发统计</li>
-                            <li>ip.c - IP数据包收/发统计</li>
-                            <li>tcp.c - TCP分节收/发统计</li>
-                            <li>udp.c - UDP数据报收/发统计</li>
-                            <li>icmp.c - ICMP消息收/发统计</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="layer">
-                        <h3>② 统计聚合层（protocol_stats.c）</h3>
-                        <ul>
-                            <li>维护5个全局统计结构体</li>
-                            <li>提供protocol_stats_to_json()序列化函数</li>
-                            <li>支持实时动态数据导出</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="layer">
-                        <h3>③ 监控服务器（monitor_server.c）</h3>
-                        <ul>
-                            <li>TCP服务器 (127.0.0.1:9999)</li>
-                            <li>支持最多10个并发客户端</li>
-                            <li>多线程事件驱动处理模型</li>
-                            <li>JSON格式数据推送</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="data-flow">
-                    - <strong>数据流</strong>: 各层采集 → 全局计数器 → JSON序列化 → TCP推送
-                </div>
-            </div>
-            
-            <!-- 箭头 -->
-            <div class="arrow">↓ JSON over TCP (端口9999)</div>
-            
-            <!-- 可视化层 -->
-            <div class="visualization-layer">
-                <h2>可视化客户端（Python）</h2>
-                <p style="margin-bottom: 15px; font-size: 14px;">monitor_gui.py (Tkinter + Matplotlib)</p>
-                
-                <div class="visualization-content">
-                    <div class="viz-panel">
-                        <h3>- 实时监控面板（6个子图）</h3>
-                        <ul>
-                            <li>IP数据包趋势（发送/接收）</li>
-                            <li>TCP数据包趋势（发送/接收）</li>
-                            <li>UDP数据包趋势（发送/接收）</li>
-                            <li>ICMP数据包趋势（发送/接收）</li>
-                            <li>以太网帧趋势（发送/接收）</li>
-                            <li>协议分布饼图</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="viz-panel">
-                        <h3>- 统计信息面板（5层数据）</h3>
-                        <ul>
-                            <li>以太网：包数、字节数、错误</li>
-                            <li>IP层：包数、字节数、错误</li>
-                            <li>TCP层：分节数、字节数、错误</li>
-                            <li>UDP层：数据报数、字节数、错误</li>
-                            <li>ICMP层：消息数、字节数、错误</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="data-flow" style="border-left-color: #17a2b8; background: rgba(23, 162, 184, 0.1); color: #0c5460; margin-top: 15px;">
-                    - <strong>更新频率</strong>: 1秒轮询一次 | <strong>显示范围</strong>: 实时滚动50秒数据窗口
-                </div>
-            </div>
+        <div class="flow-header">
+            <h1>监控流程图</h1>
+            <button class="action-btn" id="save-flow-png">保存为 PNG</button>
+        </div>
+        <div class="mermaid" id="flow-graph">
+            graph TD
+                A[应用层<br/>TCP/UDP/Web/ICMP 服务器] -->|net_init 调用| B[协议栈核心]
+                B --> C[数据采集<br/>Ethernet/IP/TCP/UDP/ICMP]
+                C --> D[统计聚合<br/>protocol_stats.c]
+                D --> E[监控服务器<br/>monitor_server.c<br/>TCP 127.0.0.1:9999]
+                E -->|JSON over TCP| F[可视化客户端<br/>monitor_gui.py]
+                F --> G[实时监控面板<br/>6 个趋势子图]
+                F --> H[统计信息面板<br/>5 层计数]
+
+                %% 辅助标注
+                C -.->|收/发计数| D
+                D -.->|序列化| E
+                F -.->|1 秒轮询| E
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+
+        const saveBtn = document.getElementById('save-flow-png');
+        const flowContainer = document.getElementById('flow-graph');
+
+        if (saveBtn && flowContainer) {
+            saveBtn.addEventListener('click', () => {
+                html2canvas(flowContainer, {
+                    scale: 3,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = '监控流程图.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            });
+        }
+    </script>
 </body>
 </html>
